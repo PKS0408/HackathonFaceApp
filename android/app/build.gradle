@@ -85,6 +85,18 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    // 👇 ADD THIS ENTIRE SPLITS BLOCK RIGHT HERE 👇
+    splits {
+        abi {
+            reset()
+            enable true
+            universalApk false  // This is the magic line that prevents the fat 55MB file
+            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+    }
+    // 👆 -------------------------------------- 👆
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

@@ -1,97 +1,26 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# DatalakeFace 📱🔒
 
-# Getting Started
+Offline facial recognition and 3D liveness detection built for **Datalake 3.0** during Hackathon 7.0.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## The Challenge
+We needed to authenticate field workers in zero-network zones using standard mid-range phones (3GB RAM). The hardest constraint? We couldn't bloat the existing React Native app, meaning the entire AI footprint had to stay strictly under 20MB while processing faces in under a second. 
 
-## Step 1: Start Metro
+## How We Built It
+Instead of relying on heavy cloud APIs or bloated 3rd-party image processing SDKs, we built a 100% offline edge-AI pipeline. We used React Native, Vision Camera, and Worklets to run everything natively on the device hardware.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### 1. Ultra-Lightweight Footprint (~5MB Total)
+To hit the sub-20MB target for the innovation criteria, we dropped heavy image-resizer plugins. Instead, we wrote a custom C++ Worklet that directly reads the raw Android `Uint8Array` camera buffer and downsamples the pixels mathematically. 
+* **FaceMesh (`~1.2MB`):** Tracks 468 facial landmarks.
+* **MobileFaceNet (`~4.0MB`):** Generates 128-D embeddings for the actual match.
+* **Result:** Our total AI bloat is ~5.2MB, keeping us 75% below the strict 20MB limit.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### 2. 3D Liveness Detection (Anti-Spoofing)
+We don't just crop a face and check it. The app forces the user to prove they are human by randomly asking them to blink, smile, or turn their head. The FaceMesh model tracks the geometric distances between the eyes, nose, and jawline at 60FPS to catch the movement, completely blocking photo or screen spoofing.
 
-```sh
-# Using npm
-npm start
+### 3. Zero-Latency Execution (< 1s)
+Because we used `react-native-worklets-core`, the entire pipeline (Camera capture → Downsampling → Liveness check → Cosine similarity match) happens on a background C++ thread. The main JavaScript UI thread never blocks, making it incredibly fast even on older Android/iOS devices.
 
-# OR using Yarn
-yarn start
-```
+### 4. Zero-Network AWS Sync
+If the user is offline, the app encrypts the match score, timestamp, and GPS coordinates into `AsyncStorage`. A background `NetInfo` radar constantly listens for a connection. The exact second the phone hits Wi-Fi or cellular data, it bulk-pushes all pending logs to the AWS Datalake and immediately purges the local cache.
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+---
